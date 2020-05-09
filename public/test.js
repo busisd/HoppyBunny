@@ -24,12 +24,18 @@ app.stage.addChild(container);
 const texture = PIXI.Texture.from("assets/bunny.png");
 
 // Create a nxn grid of bunnies
+const randomColor = () => Math.floor(Math.random()*16777215);
+
+
 const numBunnies = 8;
 for (let i = 0; i < numBunnies ** 2; i++) {
   const bunny = new PIXI.Sprite(texture);
   bunny.anchor.set(0.5);
   bunny.x = (i % numBunnies) * 64;
   bunny.y = Math.floor(i / numBunnies) * 64;
+  bunny.tint = randomColor();
+  // console.log(bunny.tint);
+  // console.log(bunny.tint.toString(16));
   container.addChild(bunny);
 }
 
@@ -89,4 +95,4 @@ container2.addChild(bun);
 bun.dragEnabled = false;
 bun.dragXOffset = 0;
 bun.dragYOffset = 0;
-
+bun.tint = 0xFFAAAA;
