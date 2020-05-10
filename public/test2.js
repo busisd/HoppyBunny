@@ -19,29 +19,6 @@ document.body.appendChild(app.view);
 // Create a new texture
 const texture = PIXI.Texture.from("assets/bunny.png");
 
-const bun = new PIXI.Sprite(texture);
-bun.x = 100;
-bun.y = 100;
-bun.anchor.set(0.5);
-// bun.tint = 0xFFAAAA;
-app.stage.addChild(bun);
-
-const player = {
-  sprite: bun,
-  y: 100,
-  yVelocity: 0,
-  maxYVelocity: 16,
-  yAcceleration: 0.45,
-  yVelocityOnClick: -8,
-  height: 52,
-  width: 56,
-  tilt: 0,
-  maxTilt: 0.3,
-  tiltVelocity: 0.02,
-};
-const GROUND_HEIGHT = app.renderer.height - 50;
-var isGameOver = false;
-
 function updateVal(val, maxVal, change) {
   if (val + change >= maxVal) {
     return maxVal;
@@ -50,157 +27,244 @@ function updateVal(val, maxVal, change) {
   }
 }
 
-function updatePlayer(delta) {
-  player.y += player.yVelocity * delta;
-  player.yVelocity = updateVal(
-    player.yVelocity,
-    player.maxYVelocity,
-    player.yAcceleration * delta
-  );
-  player.sprite.y = Math.round(player.y);
+const isUndefined = (obj) => obj === undefined;
 
-  // player.tilt = updateVal(
-  //   player.tilt,
-  //   player.maxTilt,
-  //   player.tiltVelocity * delta
-  // );
-  player.tilt = (player.yVelocity / 8) * 0.3;
-  player.sprite.rotation = player.tilt;
-
-  isGameOver = testPlayerBounds();
-}
-
-
-
-var groundGraphics = new PIXI.Graphics();
-groundGraphics.lineStyle(0, 0xff0000);
-groundGraphics.beginFill(0x006600);
-groundGraphics.drawRect(
-  0,
-  GROUND_HEIGHT,
-  app.renderer.width,
-  app.renderer.height - GROUND_HEIGHT
-);
-app.stage.addChild(groundGraphics);
-
-
-
-const allPipes = [];
-
-
-function createPipe() {
-  let newHeight = Math.round(Math.random()*(GROUND_HEIGHT-150-10))+10;
-  const newPipe = {
-    x: app.renderer.width,
-    width: 100,
-    topHeight: newHeight,
-    bottomHeight: newHeight+150,
-    topSprite: 0,
-    bottomSprite: 0,
-  };
-  
-  const newPipeContainer = new PIXI.Container();
-  newPipeContainer.x = newPipe.x;
-  app.stage.addChild(newPipeContainer);
-
-  newPipe.container = newPipeContainer;
-
-  var pipeGraphics = new PIXI.Graphics();
-  newPipeContainer.addChild(pipeGraphics);
-  pipeGraphics.lineStyle(0, 0xff0000);
-  pipeGraphics.beginFill(0x00bb00);
-  pipeGraphics.drawRect(
-    0,
-    0,
-    newPipe.width,
-    newPipe.topHeight
-  );
-  pipeGraphics.drawRect(
-    0,
-    newPipe.bottomHeight,
-    newPipe.width,
-    GROUND_HEIGHT - newPipe.bottomHeight
-  );
-  
-  allPipes.push(newPipe);
-}
-
-createPipe();
-
-function testPlayerBounds() {
-  // if (player.y + player.height / 2 > GROUND_HEIGHT) {
-  //   isGameOver = true;
-  // }
-  const { left, right, top, bottom } = player.sprite.getBounds();
-  if (bottom > GROUND_HEIGHT) {
-    return true;
+class HoppyPlayer {
+  constructor(xStart, yStart) {
+    this.x = xStart;
+    this.y = yStart;
+    this.yVelocity = 0;
+    this.maxYVelocity = 16;
+    this.yAcceleration = 0.45;
+    this.yVelocityOnClick = -8;
+    this.height = 52;
+    this.width = 56;
+    this.tilt = 0;
+    this.maxTilt = 0.3;
+    this.tiltVelocity = 0.02;
+    this.corners = [
+      [-this.width / 2, 0],
+      [0, 0],
+      [0, -this.height / 2],
+      [this.width / 2 - 6, -this.height / 2],
+      [this.width / 2 - 6, this.height / 2],
+      [-this.width / 2, this.height / 2],
+    ];
   }
 
-  // player.sprite.calculateVertices();
-  const vertices = player.sprite.vertexData;
-  for (pipe of allPipes) {
-    const pipeLeft = pipe.x;
-    const pipeRight = pipe.x+pipe.width;
-    if (
-      right > pipeLeft &&
-      left < pipeRight &&
-      (top < pipe.topHeight || bottom > pipe.bottomHeight)
-    ) {
-      if (top < pipe.topHeight) {
-        for (let i = 0; i < 4; i += 2) {
+  update(delta) {
+    this.y += this.yVelocity * delta;
+    this.yVelocity = updateVal(
+      this.yVelocity,
+      this.maxYVelocity,
+      this.yAcceleration * delta
+    );
+
+    this.tilt = (this.yVelocity / 8) * 0.3;
+  }
+}
+
+class HoppyPipe {
+  constructor(x, width, holeHeight) {
+    this.x = x;
+    this.width = width;
+    this.topHeight = holeHeight;
+    this.bottomHeight = holeHeight + 150;
+    this.topSprite = 0;
+    this.bottomSprite = 0;
+  }
+
+  update(delta) {
+    this.x -= 3 * delta;
+  }
+}
+
+const rotateVector = (vector, sinTheta, cosTheta) => [
+  cosTheta * vector[0] - sinTheta * vector[1],
+  sinTheta * vector[0] + cosTheta * vector[1],
+];
+
+class HoppyGame {
+  constructor() {
+    this.GAME_WIDTH = 400;
+    this.GAME_HEIGHT = 600;
+    this.PLAYER_WIDTH = 56;
+    this.PLAYER_HEIGHT = 52;
+    this.GROUND_HEIGHT = 550;
+    this.PIPE_WIDTH = 100;
+    this.PIPE_HOLE_HEIGHT = 150;
+    this.player = new HoppyPlayer(100, 100);
+    this.pipes = [];
+    this.isGameOver = false;
+
+    this.addPipe(this.GAME_WIDTH);
+    this.addPipe(this.GAME_WIDTH + (this.GAME_WIDTH + this.PIPE_WIDTH) / 2);
+  }
+
+  registerListeners() {
+    window.addEventListener("keydown", this.checkValidKey.bind(this), false);
+    window.addEventListener("pointerdown", this.onTap.bind(this), false);
+  }
+
+  addPipe(newX) {
+    this.pipes.push(
+      new HoppyPipe(
+        newX,
+        this.PIPE_WIDTH,
+        Math.random() * (this.GROUND_HEIGHT - this.PIPE_HOLE_HEIGHT - 20) + 10
+      )
+    );
+  }
+
+  update(delta) {
+    if (!this.isGameOver) {
+      this.player.update(delta);
+      for (let pipe of this.pipes) {
+        pipe.update(delta);
+      }
+
+      if (this.pipes[0] && this.pipes[0].x < -this.PIPE_WIDTH) {
+        this.pipes = this.pipes.slice(1);
+        this.addPipe(this.GAME_WIDTH);
+      }
+
+      this.isGameOver = this.checkCollisions();
+    }
+  }
+
+  checkCollisions() {
+    let corners = this.getPlayerCorners();
+
+    let minX, minY, maxX, maxY;
+    for (let i = 0; i < corners.length; i++) {
+      if (isUndefined(minX) || corners[i][0] < minX) minX = corners[i][0];
+      if (isUndefined(minY) || corners[i][1] < minY) minY = corners[i][1];
+      if (isUndefined(maxX) || corners[i][0] > maxX) maxX = corners[i][0];
+      if (isUndefined(maxY) || corners[i][1] > maxY) maxY = corners[i][1];
+    }
+
+    if (maxY > this.GROUND_HEIGHT) {
+      return true;
+    }
+
+    for (let pipe of this.pipes) {
+      const pipeLeft = pipe.x;
+      const pipeRight = pipe.x + pipe.width;
+      if (
+        maxX > pipeLeft &&
+        minX < pipeRight &&
+        (minY < pipe.topHeight || maxY > pipe.bottomHeight)
+      ) {
+        for (let corner of corners) {
           if (
-            vertices[i + 1] < pipe.topHeight &&
-            vertices[i] > pipeLeft &&
-            vertices[i] < pipeRight
-          )
-            return true;
-        }
-      } else {
-        for (let i = 0; i < 4; i += 2) {
-          if (
-            vertices[i + 1] + player.height > pipe.bottomHeight &&
-            vertices[i] > pipeLeft &&
-            vertices[i] < pipeRight
+            corner[0] > pipe.x &&
+            corner[0] < pipe.x + pipe.width &&
+            (corner[1] < pipe.topHeight || corner[1] > pipe.bottomHeight)
           )
             return true;
         }
       }
     }
+
+    return false;
   }
 
-  return false;
-}
+  getPlayerCorners() {
+    let sinTilt = Math.sin(this.player.tilt);
+    let cosTilt = Math.cos(this.player.tilt);
 
-function updatePipe(pipe, delta) {
-  pipe.x -= 3 * delta;
-  pipe.container.x = Math.round(pipe.x);
-  if (pipe.x < -100) {
-    app.stage.removeChild(pipe);
-    allPipes.pop();
-    createPipe();
+    return this.player.corners
+      .map((corner) => rotateVector(corner, sinTilt, cosTilt))
+      .map((vector) => [vector[0] + this.player.x, vector[1] + this.player.y]);
   }
-}
 
-// Listen for animate update
-app.ticker.add((delta) => {
-  if (!isGameOver) {
-    updatePlayer(delta);
-    
-    for (pipe of allPipes) {
-      updatePipe(pipe, delta);
+  checkValidKey(e) {
+    if (e.key == " ") {
+      onTap();
     }
   }
-});
 
-window.addEventListener("keydown", checkValidKey, false);
-window.addEventListener("pointerdown", onTap, false);
-
-function checkValidKey(e) {
-  if (e.key == " ") {
-    onTap();
+  onTap() {
+    this.player.yVelocity = this.player.yVelocityOnClick;
   }
 }
 
-function onTap() {
-  player.yVelocity = player.yVelocityOnClick;
+// app.stage.addChild(bun);
+
+class HoppyView {
+  constructor(newGame) {
+    this.game = newGame;
+
+    this.playerSprite = new PIXI.Sprite(texture);
+    this.playerSprite.anchor.set(0.5);
+    app.stage.addChild(this.playerSprite);
+
+    this.groundGraphics = new PIXI.Graphics();
+    this.groundGraphics.lineStyle(0, 0xff0000);
+    this.groundGraphics.beginFill(0x006600);
+    this.groundGraphics.drawRect(
+      0,
+      this.game.GROUND_HEIGHT,
+      this.game.GAME_WIDTH,
+      this.game.GAME_HEIGHT - this.game.GROUND_HEIGHT
+    );
+    app.stage.addChild(this.groundGraphics);
+
+    this.pipeGraphics = new PIXI.Graphics();
+    app.stage.addChild(this.pipeGraphics);
+
+    this.testGraphics = new PIXI.Graphics();
+    app.stage.addChild(this.testGraphics);
+  }
+
+  drawPipe(pipe) {
+    this.pipeGraphics.drawRect(pipe.x, 0, pipe.width, pipe.topHeight);
+    this.pipeGraphics.drawRect(
+      pipe.x,
+      pipe.bottomHeight,
+      pipe.width,
+      this.game.GROUND_HEIGHT - pipe.bottomHeight
+    );
+  }
+
+  draw() {
+    this.playerSprite.x = this.game.player.x;
+    this.playerSprite.y = this.game.player.y;
+    this.playerSprite.rotation = this.game.player.tilt;
+
+    this.pipeGraphics.clear();
+    this.pipeGraphics.lineStyle(0, 0xff0000);
+    this.pipeGraphics.beginFill(0x00bb00);
+    for (let pipe of this.game.pipes) {
+      this.drawPipe(pipe);
+    }
+
+    if (false) {
+      let corners = this.game.getPlayerCorners();
+      this.testGraphics.clear();
+      this.testGraphics.lineStyle(0, 0xff0000);
+      this.testGraphics.beginFill(0xff0000);
+      for (let corner of corners) {
+        this.testGraphics.drawCircle(corner[0], corner[1], 1);
+      }
+
+      this.testGraphics.drawCircle(100, 550, 3);
+
+      for (let pipe of this.game.pipes) {
+        this.testGraphics.drawCircle(pipe.x, pipe.topHeight, 2);
+        this.testGraphics.drawCircle(pipe.x + pipe.width, pipe.topHeight, 2);
+        this.testGraphics.drawCircle(pipe.x, pipe.bottomHeight, 2);
+        this.testGraphics.drawCircle(pipe.x + pipe.width, pipe.bottomHeight, 2);
+      }
+    }
+  }
 }
+
+const theGame = new HoppyGame();
+theGame.registerListeners();
+const theView = new HoppyView(theGame);
+
+app.ticker.add((delta) => {
+  theGame.update(delta);
+  theView.draw();
+});
