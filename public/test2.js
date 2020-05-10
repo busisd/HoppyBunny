@@ -30,15 +30,16 @@ const player = {
   sprite: bun,
   y: 100,
   yVelocity: 0,
-  maxYVelocity: 96,
-  yAcceleration: 0.25,
+  maxYVelocity: 16,
+  yAcceleration: 0.45,
+  yVelocityOnClick: -8,
   height: 52,
   width: 56,
   tilt: 0,
   maxTilt: 0.3,
   tiltVelocity: 0.02,
 };
-const GROUND_HEIGHT = app.renderer.height - 100;
+const GROUND_HEIGHT = app.renderer.height - 50;
 var isGameOver = false;
 
 function updateVal(val, maxVal, change) {
@@ -69,14 +70,7 @@ function updatePlayer(delta) {
   isGameOver = testPlayerBounds();
 }
 
-const newPipe = {
-  x: app.renderer.width,
-  width: 100,
-  topHeight: 200,
-  bottomHeight: 350,
-  topSprite: 0,
-  bottomSprite: 0,
-};
+
 
 var groundGraphics = new PIXI.Graphics();
 groundGraphics.lineStyle(0, 0xff0000);
@@ -89,26 +83,49 @@ groundGraphics.drawRect(
 );
 app.stage.addChild(groundGraphics);
 
-const newPipeContainer = new PIXI.Container();
-newPipeContainer.x = newPipe.x;
-app.stage.addChild(newPipeContainer);
-var pipeGraphics = new PIXI.Graphics();
-newPipeContainer.addChild(pipeGraphics);
 
-pipeGraphics.lineStyle(0, 0xff0000);
-pipeGraphics.beginFill(0x00bb00);
-pipeGraphics.drawRect(
-  0,
-  0,
-  newPipe.width,
-  newPipe.topHeight
-);
-pipeGraphics.drawRect(
-  0,
-  newPipe.bottomHeight,
-  newPipe.width,
-  GROUND_HEIGHT - newPipe.bottomHeight
-);
+
+const allPipes = [];
+
+
+function createPipe() {
+  let newHeight = Math.round(Math.random()*(GROUND_HEIGHT-150-10))+10;
+  const newPipe = {
+    x: app.renderer.width,
+    width: 100,
+    topHeight: newHeight,
+    bottomHeight: newHeight+150,
+    topSprite: 0,
+    bottomSprite: 0,
+  };
+  
+  const newPipeContainer = new PIXI.Container();
+  newPipeContainer.x = newPipe.x;
+  app.stage.addChild(newPipeContainer);
+
+  newPipe.container = newPipeContainer;
+
+  var pipeGraphics = new PIXI.Graphics();
+  newPipeContainer.addChild(pipeGraphics);
+  pipeGraphics.lineStyle(0, 0xff0000);
+  pipeGraphics.beginFill(0x00bb00);
+  pipeGraphics.drawRect(
+    0,
+    0,
+    newPipe.width,
+    newPipe.topHeight
+  );
+  pipeGraphics.drawRect(
+    0,
+    newPipe.bottomHeight,
+    newPipe.width,
+    GROUND_HEIGHT - newPipe.bottomHeight
+  );
+  
+  allPipes.push(newPipe);
+}
+
+createPipe();
 
 function testPlayerBounds() {
   // if (player.y + player.height / 2 > GROUND_HEIGHT) {
@@ -121,7 +138,7 @@ function testPlayerBounds() {
 
   // player.sprite.calculateVertices();
   const vertices = player.sprite.vertexData;
-  for (pipe of [newPipe]) {
+  for (pipe of allPipes) {
     const pipeLeft = pipe.x;
     const pipeRight = pipe.x+pipe.width;
     if (
@@ -154,17 +171,24 @@ function testPlayerBounds() {
   return false;
 }
 
+function updatePipe(pipe, delta) {
+  pipe.x -= 3 * delta;
+  pipe.container.x = Math.round(pipe.x);
+  if (pipe.x < -100) {
+    app.stage.removeChild(pipe);
+    allPipes.pop();
+    createPipe();
+  }
+}
+
 // Listen for animate update
 app.ticker.add((delta) => {
   if (!isGameOver) {
     updatePlayer(delta);
-
-    newPipe.x -= 3 * delta;
-    if (newPipe.x < -100) {
-      newPipe.x = 300;
+    
+    for (pipe of allPipes) {
+      updatePipe(pipe, delta);
     }
-    newPipeContainer.x = Math.round(newPipe.x);
-
   }
 });
 
@@ -178,6 +202,5 @@ function checkValidKey(e) {
 }
 
 function onTap() {
-  player.yVelocity = -6;
-  player.tilt = -0.3;
+  player.yVelocity = player.yVelocityOnClick;
 }
