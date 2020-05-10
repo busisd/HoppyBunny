@@ -54,8 +54,8 @@ app.ticker.add((delta) => {
   container.rotation += 0.01 * delta;
 });
 
-const container2 = new PIXI.Container();
-app.stage.addChild(container2);
+// const container2 = new PIXI.Container();
+// app.stage.addChild(container2);
 
 const bun = new PIXI.Sprite(texture);
 bun.x = app.screen.width - 64;
@@ -90,9 +90,11 @@ bun
   })
   .on("pointerup", () => bun.dragEnabled = false)
   .on("pointerupoutside", () => bun.dragEnabled = false);
-container2.addChild(bun);
+// container2.addChild(bun);
 
 bun.dragEnabled = false;
 bun.dragXOffset = 0;
 bun.dragYOffset = 0;
 bun.tint = 0xFFAAAA;
+
+app.stage.addChild(bun);
