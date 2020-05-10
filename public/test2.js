@@ -9,10 +9,10 @@
 // ********************
 
 const app = new PIXI.Application({
-  width: 600,
+  width: 400,
   height: 600,
   backgroundColor: 0x1099bb,
-  resolution: window.devicePixelRatio || 1,
+  // resolution: window.devicePixelRatio || 1,
 });
 document.body.appendChild(app.view);
 
@@ -193,7 +193,7 @@ app.ticker.add((delta) => {
 });
 
 window.addEventListener("keydown", checkValidKey, false);
-window.addEventListener("mousedown", onTap, false);
+window.addEventListener("pointerdown", onTap, false);
 
 function checkValidKey(e) {
   if (e.key == " ") {
