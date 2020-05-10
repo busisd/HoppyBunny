@@ -52,6 +52,13 @@ class HoppyPlayer {
     ];
   }
 
+  reset(xStart, yStart) {
+    this.x = xStart;
+    this.y = yStart;
+    this.yVelocity = 0;
+    this.tilt = 0;
+  }
+
   update(delta) {
     this.y += this.yVelocity * delta;
     this.yVelocity = updateVal(
@@ -96,9 +103,20 @@ class HoppyGame {
     this.player = new HoppyPlayer(100, 100);
     this.pipes = [];
     this.isGameOver = false;
+    this.score = 0;
+    this.highScore = 0;
 
     this.addPipe(this.GAME_WIDTH);
     this.addPipe(this.GAME_WIDTH + (this.GAME_WIDTH + this.PIPE_WIDTH) / 2);
+  }
+
+  resetGame() {
+    this.pipes = [];
+    this.isGameOver = false;
+    this.player.reset(100, 100);
+    this.addPipe(this.GAME_WIDTH);
+    this.addPipe(this.GAME_WIDTH + (this.GAME_WIDTH + this.PIPE_WIDTH) / 2);
+    this.score = 0;
   }
 
   registerListeners() {
@@ -126,6 +144,8 @@ class HoppyGame {
       if (this.pipes[0] && this.pipes[0].x < -this.PIPE_WIDTH) {
         this.pipes = this.pipes.slice(1);
         this.addPipe(this.GAME_WIDTH);
+        this.score++;
+        if (this.score > this.highScore) this.highScore = this.score;
       }
 
       this.isGameOver = this.checkCollisions();
@@ -185,7 +205,11 @@ class HoppyGame {
   }
 
   onTap() {
-    this.player.yVelocity = this.player.yVelocityOnClick;
+    if (!this.isGameOver) {
+      this.player.yVelocity = this.player.yVelocityOnClick;
+    } else {
+      this.resetGame();
+    }
   }
 }
 
@@ -213,6 +237,12 @@ class HoppyView {
     this.pipeGraphics = new PIXI.Graphics();
     app.stage.addChild(this.pipeGraphics);
 
+    this.displayedScore = this.game.score;
+    this.displayedHighScore = this.game.highScore;
+    this.textDisplay = new PIXI.Text("Score: "+this.displayedScore+"\nHigh Score: "+this.displayedHighScore, {align: 'right'});
+    this.textDisplay.x = this.game.GAME_WIDTH - this.textDisplay.width - 5;
+    app.stage.addChild(this.textDisplay);
+
     this.testGraphics = new PIXI.Graphics();
     app.stage.addChild(this.testGraphics);
   }
@@ -237,6 +267,13 @@ class HoppyView {
     this.pipeGraphics.beginFill(0x00bb00);
     for (let pipe of this.game.pipes) {
       this.drawPipe(pipe);
+    }
+
+    if (this.game.score != this.displayedScore) {
+      this.displayedScore = this.game.score;
+      this.displayedHighScore = this.game.highScore;
+      this.textDisplay.text = "Score: "+this.displayedScore+"\nHigh Score: "+this.displayedHighScore
+      this.textDisplay.x = this.game.GAME_WIDTH - this.textDisplay.width - 5;
     }
 
     if (false) {
