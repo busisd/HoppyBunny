@@ -12,14 +12,9 @@ const app = new PIXI.Application({
   width: 400,
   height: 600,
   backgroundColor: 0x1099bb,
-  // resolution: window.devicePixelRatio || 1,
+  resolution: window.devicePixelRatio || 1,
 });
 document.body.appendChild(app.view);
-if (window.innerHeight*2/3 <= window.innerWidth) {
-  app.renderer.resize(window.innerHeight*2/3, window.innerHeight);
-} else {
-  app.renderer.resize(window.innerWidth, window.innerWidth*1.5);
-}
 
 const gameContainer = new PIXI.Container();
 app.stage.addChild(gameContainer);
@@ -314,10 +309,3 @@ app.ticker.add((delta) => {
   theView.draw();
 });
 
-if(window.innerHeight*2/3 <= window.innerWidth) {
-  gameContainer.width = 400 * window.innerHeight / 600;
-  gameContainer.height = window.innerHeight;
-} else {
-  gameContainer.width = window.innerWidth;
-  gameContainer.height = window.innerWidth * 1.5;
-}
