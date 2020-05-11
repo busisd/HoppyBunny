@@ -15,6 +15,14 @@ const app = new PIXI.Application({
   // resolution: window.devicePixelRatio || 1,
 });
 document.body.appendChild(app.view);
+if (window.innerHeight*2/3 <= window.innerWidth) {
+  app.renderer.resize(window.innerHeight*2/3, window.innerHeight);
+} else {
+  app.renderer.resize(window.innerWidth, window.innerWidth*1.5);
+}
+
+const gameContainer = new PIXI.Container();
+app.stage.addChild(gameContainer);
 
 // Create a new texture
 const texture = PIXI.Texture.from("assets/bunny.png");
@@ -200,11 +208,12 @@ class HoppyGame {
 
   checkValidKey(e) {
     if (e.key == " ") {
-      onTap();
+      this.onTap(e);
     }
   }
 
-  onTap() {
+  onTap(e) {
+    e.preventDefault();
     if (!this.isGameOver) {
       this.player.yVelocity = this.player.yVelocityOnClick;
     } else {
@@ -213,15 +222,13 @@ class HoppyGame {
   }
 }
 
-// app.stage.addChild(bun);
-
 class HoppyView {
   constructor(newGame) {
     this.game = newGame;
 
     this.playerSprite = new PIXI.Sprite(texture);
     this.playerSprite.anchor.set(0.5);
-    app.stage.addChild(this.playerSprite);
+    gameContainer.addChild(this.playerSprite);
 
     this.groundGraphics = new PIXI.Graphics();
     this.groundGraphics.lineStyle(0, 0xff0000);
@@ -232,19 +239,19 @@ class HoppyView {
       this.game.GAME_WIDTH,
       this.game.GAME_HEIGHT - this.game.GROUND_HEIGHT
     );
-    app.stage.addChild(this.groundGraphics);
+    gameContainer.addChild(this.groundGraphics);
 
     this.pipeGraphics = new PIXI.Graphics();
-    app.stage.addChild(this.pipeGraphics);
+    gameContainer.addChild(this.pipeGraphics);
 
     this.displayedScore = this.game.score;
     this.displayedHighScore = this.game.highScore;
     this.textDisplay = new PIXI.Text("Score: "+this.displayedScore+"\nHigh Score: "+this.displayedHighScore, {align: 'right'});
     this.textDisplay.x = this.game.GAME_WIDTH - this.textDisplay.width - 5;
-    app.stage.addChild(this.textDisplay);
+    gameContainer.addChild(this.textDisplay);
 
     this.testGraphics = new PIXI.Graphics();
-    app.stage.addChild(this.testGraphics);
+    gameContainer.addChild(this.testGraphics);
   }
 
   drawPipe(pipe) {
@@ -261,6 +268,7 @@ class HoppyView {
     this.playerSprite.x = this.game.player.x;
     this.playerSprite.y = this.game.player.y;
     this.playerSprite.rotation = this.game.player.tilt;
+    this.playerSprite.tint = this.game.isGameOver ? 0xffaaaa : 0xffffff;
 
     this.pipeGraphics.clear();
     this.pipeGraphics.lineStyle(0, 0xff0000);
@@ -305,3 +313,11 @@ app.ticker.add((delta) => {
   theGame.update(delta);
   theView.draw();
 });
+
+if(window.innerHeight*2/3 <= window.innerWidth) {
+  gameContainer.width = 400 * window.innerHeight / 600;
+  gameContainer.height = window.innerHeight;
+} else {
+  gameContainer.width = window.innerWidth;
+  gameContainer.height = window.innerWidth * 1.5;
+}
